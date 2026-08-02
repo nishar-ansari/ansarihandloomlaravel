@@ -1,0 +1,40 @@
+cd mobile
+flutter pub get
+flutter devices
+flutter run
+
+flutter doctor
+
+flutter config --android-sdk "F:\Development\Android\Sdk"
+flutter config --android-sdk "F:\Development\Android\Sdk"
+
+
+
+
+cd D:\wamp64\www\TrackerApp\mobile
+flutter pub get
+flutter devices
+flutter run
+
+
+cd mobile
+flutter clean
+flutter pub get
+flutter build apk --release
+
+
+--------
+flutter run -d chrome
+
+================
+# mobile_customer
+flutter build web --release
+
+flutter build apk --release
+
+# Generates file: mobile_customer/build/app/outputs/flutter-apk/app-release.apk
+
+
+===================
+# run web app
+dart pub global activate dhttpd

@@ -1,0 +1,22 @@
+1. Internal Admin Login (Super Admin)
+Used to log into the Admin Mobile App or authenticate admin API endpoints:
+
+Username / Email: admin@ansari.com
+Password: Admin@123
+
+2. Customer Mobile Login
+Used to log into the Customer Mobile App (via mobile number and OTP pin validation):
+
+Mobile Number: 9876543219
+OTP Code (PIN): 123456 (This is mocked in the local database sandbox for easy sign-in; you can also enter any other mobile number and it will generate code 123456 automatically for testing).
+
+
+
+
+
+==============
+deme.ansarihandloom.com
+db user pass-
+
+ansariha_demo_user
+XTw~Toro1C;)yE%4
