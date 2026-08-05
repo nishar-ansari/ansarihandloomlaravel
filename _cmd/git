@@ -1,7 +1,7 @@
-echo "# eshopLaravel" >> README.md
+echo "# ansarihandloomlaravel" >> README.md
 git init
 git add README.md
 git commit -m "first commit"
 git branch -M main
-git remote add origin https://github.com/nishar-ansari/eshopLaravel.git
+git remote add origin https://github.com/nishar-ansari/ansarihandloomlaravel.git
 git push -u origin main
