@@ -23,6 +23,16 @@
             {{ session('error') }}
         </div>
     @endif
+    @if($errors->any())
+        <div class="alert alert-danger text-xs rounded border border-red-300 py-2.5 px-4 bg-red-50 text-red-700">
+            <strong class="block mb-1">Please fix the following:</strong>
+            <ul class="mb-0 pl-4 list-disc">
+                @foreach($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
 
     <!-- Bootstrap Navigation Tabs -->
     <ul class="nav nav-tabs border-b border-luxury-gold/15 mb-6 text-xs font-semibold" id="productEditTabs" role="tablist">
@@ -30,10 +40,7 @@
             <button class="nav-link active text-luxury-maroon hover:text-luxury-gold py-3 px-6" id="base-info-tab" data-bs-toggle="tab" data-bs-target="#base-info" type="button" role="tab"><i class="bi bi-info-circle-fill mr-1"></i> Base Details & Specs</button>
         </li>
         <li class="nav-item" role="presentation">
-            <button class="nav-link text-luxury-maroon hover:text-luxury-gold py-3 px-6" id="sku-variants-tab" data-bs-toggle="tab" data-bs-target="#sku-variants" type="button" role="tab"><i class="bi bi-box-seam-fill mr-1"></i> Sku Variants ({{ $product->skus->count() }})</button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link text-luxury-maroon hover:text-luxury-gold py-3 px-6" id="gallery-tab" data-bs-toggle="tab" data-bs-target="#gallery" type="button" role="tab"><i class="bi bi-images mr-1"></i> Gallery mapping ({{ $product->images->count() }})</button>
+            <button class="nav-link text-luxury-maroon hover:text-luxury-gold py-3 px-6" id="sku-variants-tab" data-bs-toggle="tab" data-bs-target="#sku-variants" type="button" role="tab"><i class="bi bi-box-seam-fill mr-1"></i> Sku Variants &amp; Photos ({{ $product->skus->count() }})</button>
         </li>
     </ul>
 
@@ -71,11 +78,10 @@
                         </div>
 
                         <div class="col-md-4">
-                            <label class="font-semibold mb-1 block">Upload Primary Cover Image</label>
-                            <input type="file" name="primary_image" class="w-full border rounded px-3 py-2 outline-none bg-white">
-                            @if($product->primaryImage)
-                                <span class="text-[10px] text-gray-400 mt-1 block">Current Cover: <strong class="text-luxury-maroon">{{ $product->primaryImage->image_path }}</strong></span>
-                            @endif
+                            <label class="font-semibold mb-1 block">Listing Thumbnail</label>
+                            <p class="text-[10px] text-gray-400 mt-1 mb-0 bg-gray-50 border rounded px-3 py-2">
+                                Photos live on each variant now — go to the <strong>Sku Variants &amp; Photos</strong> tab, upload photos to a variant, and mark it "Default" to control the shop thumbnail.
+                            </p>
                         </div>
 
                         <div class="col-md-12">
@@ -156,7 +162,7 @@
                             <div class="row g-2">
                                 <div class="col-md-6">
                                     <label class="font-semibold block mb-1">Selling Price *</label>
-                                    <input type="number" step="0.01" name="selling_price" required value="{{ $product->base_price }}" class="w-full border rounded px-3 py-2 outline-none">
+                                    <input type="number" step="0.01" name="selling_price" required value="{{ old('selling_price', optional($product->skus->first())->selling_price) }}" class="w-full border rounded px-3 py-2 outline-none">
                                 </div>
                                 <div class="col-md-6">
                                     <label class="font-semibold block mb-1">MRP Price</label>
@@ -223,19 +229,31 @@
                         
                         <div class="space-y-4">
                             @foreach($product->skus as $sku)
-                                <div class="border rounded-lg p-4 bg-gray-50 text-xs space-y-3">
+                                <div class="border rounded-lg p-4 {{ $sku->is_default ? 'bg-luxury-beige/20 border-luxury-gold/40' : 'bg-gray-50' }} text-xs space-y-3">
+                                    <div class="flex items-center justify-between border-b pb-2 mb-2">
+                                        <div class="flex items-center space-x-2">
+                                            <span class="font-bold text-luxury-maroon uppercase font-mono">SKU: {{ $sku->sku_code }}</span>
+                                            @if($sku->is_default)
+                                                <span class="bg-luxury-maroon text-luxury-gold text-[9px] font-bold uppercase px-2 py-0.5 rounded">Default (shown in shop)</span>
+                                            @else
+                                                <form action="{{ route('admin.products.sku.default', $sku->id) }}" method="POST" class="inline">
+                                                    @csrf
+                                                    <button type="submit" class="text-[9px] font-bold uppercase text-luxury-gold hover:underline">Set as Default</button>
+                                                </form>
+                                            @endif
+                                        </div>
+                                        <div class="flex items-center space-x-1">
+                                            @foreach($sku->attributeValues as $val)
+                                                <span class="bg-luxury-gold/20 text-luxury-maroon px-2 py-0.5 rounded text-[9px] font-bold border border-luxury-gold/15">
+                                                    {{ $val->attribute->name }}: {{ $val->value }}
+                                                </span>
+                                            @endforeach
+                                        </div>
+                                    </div>
+
                                     <form action="{{ route('admin.products.sku.update', $sku->id) }}" method="POST">
                                         @csrf
-                                        <div class="flex items-center justify-between border-b pb-2 mb-2">
-                                            <span class="font-bold text-luxury-maroon uppercase font-mono">SKU: {{ $sku->sku_code }}</span>
-                                            <div class="flex items-center space-x-1">
-                                                @foreach($sku->attributeValues as $val)
-                                                    <span class="bg-luxury-gold/20 text-luxury-maroon px-2 py-0.5 rounded text-[9px] font-bold border border-luxury-gold/15">
-                                                        {{ $val->attribute->name }}: {{ $val->value }}
-                                                    </span>
-                                                @endforeach
-                                            </div>
-                                        </div>
+                                        <input type="hidden" name="sku_code" value="{{ $sku->sku_code }}">
 
                                         <div class="row g-2">
                                             <div class="col-md-3">
@@ -295,6 +313,45 @@
                                             </button>
                                         </div>
                                     </form>
+
+                                    <!-- Photos for this variant only -->
+                                    <div class="pt-3 border-t mt-3 space-y-2">
+                                        <div class="flex items-center justify-between flex-wrap gap-2">
+                                            <strong class="text-[10px] text-gray-400 uppercase tracking-wider">Photos ({{ $sku->images->count() }})</strong>
+                                            <form action="{{ route('admin.products.image.upload', $sku->id) }}" method="POST" enctype="multipart/form-data" class="flex items-center space-x-2">
+                                                @csrf
+                                                <input type="file" name="product_images[]" multiple required accept=".jpg,.jpeg,.png,.gif,.webp" class="text-[10px] border rounded px-1.5 py-1 outline-none bg-white w-48">
+                                                <button type="submit" class="bg-luxury-maroon text-white font-bold px-3 py-1 rounded uppercase tracking-wider text-[9px] hover:bg-luxury-maroonlight transition">
+                                                    Upload
+                                                </button>
+                                            </form>
+                                        </div>
+                                        <span class="text-[9px] text-gray-400 block">JPG, PNG, GIF or WEBP - up to 8MB each, up to 10 photos at once. First photo uploaded becomes primary.</span>
+                                        <div class="flex flex-wrap gap-3">
+                                            @forelse($sku->images as $img)
+                                                <div class="w-20 relative border rounded overflow-hidden bg-white">
+                                                    <img src="{{ asset('images/' . $img->image_path) }}" class="w-full aspect-square object-cover" alt="{{ $sku->sku_code }}">
+                                                    @if($img->is_primary)
+                                                        <span class="absolute top-0.5 left-0.5 bg-luxury-maroon text-luxury-gold text-[7px] font-bold uppercase px-1 rounded">Primary</span>
+                                                    @endif
+                                                    <div class="flex border-t text-[8px]">
+                                                        @if(!$img->is_primary)
+                                                            <form action="{{ route('admin.products.image.primary', $img->id) }}" method="POST" class="flex-1">
+                                                                @csrf
+                                                                <button type="submit" class="w-full py-0.5 hover:bg-gray-100 font-semibold">Set Primary</button>
+                                                            </form>
+                                                        @endif
+                                                        <form action="{{ route('admin.products.image.delete', $img->id) }}" method="POST" class="flex-1">
+                                                            @csrf
+                                                            <button type="submit" onclick="return confirm('Delete this photo?')" class="w-full py-0.5 hover:bg-red-50 text-danger font-semibold">Delete</button>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            @empty
+                                                <span class="text-[10px] text-gray-400 italic">No photos yet for this variant.</span>
+                                            @endforelse
+                                        </div>
+                                    </div>
                                 </div>
                             @endforeach
                         </div>
@@ -303,107 +360,22 @@
             </div>
         </div>
 
-        <!-- TAB 3: PHOTO GALLERIES WITH MULTIDIMENSIONAL TAGGING -->
-        <div class="tab-pane fade" id="gallery" role="tabpanel">
-            <div class="row g-4">
-                <!-- Add Image Form -->
-                <div class="col-lg-4">
-                    <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-6 space-y-4">
-                        <h3 class="text-sm font-bold font-serif uppercase tracking-wider text-luxury-maroon"><i class="bi bi-cloud-upload-fill mr-1"></i> Upload Gallery Image</h3>
-                        <form action="{{ route('admin.products.image.upload', $product->id) }}" method="POST" enctype="multipart/form-data" class="space-y-3 text-xs">
-                            @csrf
-                            <div>
-                                <label class="font-semibold block mb-1">Select Photo File *</label>
-                                <input type="file" name="product_image" required class="w-full border rounded px-3 py-2 outline-none bg-white">
-                            </div>
-                            
-                            <!-- Multidimensional tag selections -->
-                            @if($variantAttrs->isNotEmpty())
-                                <div>
-                                    <label class="font-semibold block mb-1">Tag Variant Option Combinations (Multi-Select)</label>
-                                    <div class="space-y-2 bg-gray-50 border rounded p-3 text-[10px] max-h-48 overflow-y-auto">
-                                        @foreach($variantAttrs as $attr)
-                                            <div class="border-b pb-1 mb-1 font-semibold text-luxury-gold">{{ $attr->name }}:</div>
-                                            <div class="flex flex-wrap gap-2 mb-2">
-                                                @foreach($attr->values as $val)
-                                                    <label class="flex items-center space-x-1 cursor-pointer">
-                                                        <input type="checkbox" name="attributes[]" value="{{ $val->id }}" class="accent-luxury-maroon">
-                                                        <span>{{ $val->value }}</span>
-                                                    </label>
-                                                @endforeach
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                    <span class="text-[9px] text-gray-400 mt-1 block">Checking tags will limit this image to only appear when the user selects those specific option configurations. Leaving checkboxes blank maps this as a generic product image showing for all variants.</span>
-                                </div>
-                            @endif
-
-                            <button type="submit" class="w-full bg-luxury-maroon text-white font-bold py-2.5 rounded uppercase tracking-wider text-[10px] hover:bg-luxury-maroonlight transition">
-                                Upload Photo
-                            </button>
-                        </form>
-                    </div>
-                </div>
-
-                <!-- Existing Images Grid -->
-                <div class="col-lg-8">
-                    <div class="bg-white rounded-lg shadow-sm border border-gray-100 p-6 space-y-4">
-                        <h3 class="text-sm font-bold font-serif uppercase tracking-wider text-luxury-maroon"><i class="bi bi-images mr-1"></i> Option-Filtered Image Gallery</h3>
-                        
-                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                            @forelse($product->images as $img)
-                                <div class="border rounded-lg overflow-hidden bg-gray-50 flex flex-col justify-between shadow-xxs">
-                                    <!-- Image Thumbnail -->
-                                    <div class="aspect-[4/3] relative bg-white border-b">
-                                        <img src="{{ asset('images/' . $img->image_path) }}" class="w-full h-full object-cover" alt="Gallery Photo">
-                                        @if($img->is_primary)
-                                            <span class="absolute top-2 left-2 bg-luxury-maroon text-luxury-gold text-[9px] font-bold uppercase px-2 py-0.5 rounded shadow">
-                                                Primary Cover
-                                            </span>
-                                        @endif
-                                    </div>
-                                    
-                                    <!-- Image Dynamic Attributes Checklist Mapping -->
-                                    <div class="p-3 space-y-2 text-xxs">
-                                        <form action="{{ route('admin.products.image.color', $img->id) }}" method="POST" class="space-y-1.5">
-                                            @csrf
-                                            <label class="font-semibold block text-gray-500">Edit Option Combinations:</label>
-                                            <div class="space-y-2 bg-white border rounded p-2 max-h-32 overflow-y-auto">
-                                                @foreach($variantAttrs as $attr)
-                                                    <div class="font-bold border-b text-gray-400 pb-0.5 mb-1">{{ $attr->name }}:</div>
-                                                    @foreach($attr->values as $val)
-                                                        @php
-                                                            $isTagged = $img->attributeValues->contains($val->id);
-                                                        @endphp
-                                                        <label class="flex items-center space-x-1 cursor-pointer">
-                                                            <input type="checkbox" name="attributes[]" value="{{ $val->id }}" {{ $isTagged ? 'checked' : '' }} onchange="this.form.submit()" class="accent-luxury-maroon">
-                                                            <span>{{ $val->value }}</span>
-                                                        </label>
-                                                    @endforeach
-                                                @endforeach
-                                            </div>
-                                        </form>
-
-                                        @if(!$img->is_primary)
-                                            <div class="pt-2 border-t flex justify-end">
-                                                <form action="{{ route('admin.products.image.delete', $img->id) }}" method="POST">
-                                                    @csrf
-                                                    <button type="submit" onclick="return confirm('Delete this photo?')" class="text-danger hover:underline font-semibold block text-[10px]">
-                                                        <i class="bi bi-trash"></i> Delete Photo
-                                                    </button>
-                                                </form>
-                                            </div>
-                                        @endif
-                                    </div>
-                                </div>
-                            @empty
-                                <div class="col-span-3 text-center py-8 text-gray-400 text-xs">No extra photos uploaded.</div>
-                            @endforelse
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 </div>
+@endsection
+
+@section('scripts')
+<script>
+    // Re-activate whichever tab the previous form submit was on (e.g. SKU
+    // create/update/upload redirect back with #sku-variants) instead of
+    // always resetting to "Base Details & Specs".
+    document.addEventListener('DOMContentLoaded', function () {
+        if (window.location.hash) {
+            var trigger = document.querySelector('button[data-bs-target="' + window.location.hash + '"]');
+            if (trigger && window.bootstrap) {
+                new bootstrap.Tab(trigger).show();
+            }
+        }
+    });
+</script>
 @endsection

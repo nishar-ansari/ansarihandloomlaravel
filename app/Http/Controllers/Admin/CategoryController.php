@@ -24,6 +24,16 @@ class CategoryController extends Controller
             'sort_order' => 'required|integer',
         ]);
 
+        // Real-life scenario: keep the category tree to two levels (docx section 2)
+        // so navigation and the admin panel stay manageable - a sub-category
+        // cannot itself become a parent.
+        if ($request->filled('parent_id')) {
+            $parent = Category::findOrFail($request->parent_id);
+            if ($parent->parent_id !== null) {
+                return redirect()->back()->withInput()->with('error', 'Category structure is limited to two levels. "' . $parent->name . '" is already a sub-category and cannot have children - use a filterable attribute instead.');
+            }
+        }
+
         Category::create([
             'name' => $request->name,
             'slug' => Str::slug($request->name) . '-' . time(),

@@ -84,12 +84,13 @@ Route::prefix('admin')->group(function () {
         Route::post('/products/{id}/edit', [AdminProductController::class, 'update'])->name('admin.products.update');
         Route::post('/products/{id}/delete', [AdminProductController::class, 'destroy'])->name('admin.products.destroy');
 
-        // Product SKU and Image Variants Management
+        // Product SKU and Image Variants Management (images belong to the SKU)
         Route::post('/products/{id}/sku/create', [AdminProductController::class, 'storeSku'])->name('admin.products.sku.store');
         Route::post('/products/sku/{id}/update', [AdminProductController::class, 'updateSku'])->name('admin.products.sku.update');
-        Route::post('/products/{id}/image/upload', [AdminProductController::class, 'uploadImage'])->name('admin.products.image.upload');
+        Route::post('/products/sku/{id}/default', [AdminProductController::class, 'setDefaultSku'])->name('admin.products.sku.default');
+        Route::post('/products/sku/{id}/image/upload', [AdminProductController::class, 'uploadImage'])->name('admin.products.image.upload');
         Route::post('/products/image/{id}/delete', [AdminProductController::class, 'deleteImage'])->name('admin.products.image.delete');
-        Route::post('/products/image/{id}/color', [AdminProductController::class, 'updateImageColor'])->name('admin.products.image.color');
+        Route::post('/products/image/{id}/primary', [AdminProductController::class, 'setPrimaryImage'])->name('admin.products.image.primary');
 
         // Categories & Brands
         Route::get('/categories', [AdminCategoryController::class, 'index'])->name('admin.categories.index');

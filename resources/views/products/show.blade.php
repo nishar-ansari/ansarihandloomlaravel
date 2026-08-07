@@ -29,6 +29,34 @@
 
     // Group global product attributes (is_variant = 0)
     $globalAttributes = $product->attributeSet->attributes->where('is_variant', 0)->sortBy('sort_order');
+
+    // Price/photos live on the SKU, never the product (docx section 4 & 6).
+    // Pick the merchandiser-flagged default variant, falling back to the
+    // cheapest one, so the page renders correct data before JS runs.
+    $initialSku = $product->skus->firstWhere('is_default', true) ?? $product->skus->sortBy('selling_price')->first();
+    $initialImage = $initialSku && $initialSku->images->isNotEmpty()
+        ? ($initialSku->images->firstWhere('is_primary', true) ?? $initialSku->images->first())
+        : null;
+
+    // Flatten SKU + per-variant photo data for the storefront JS switcher.
+    $skuListForJs = $product->skus->map(function ($sku) {
+        $imageUrls = [];
+        foreach ($sku->images as $img) {
+            $imageUrls[] = asset('images/' . $img->image_path);
+        }
+
+        return [
+            'id' => $sku->id,
+            'sku_code' => $sku->sku_code,
+            'selling_price' => $sku->selling_price,
+            'mrp' => $sku->mrp,
+            'stock' => $sku->stock,
+            'barcode' => $sku->barcode ?? 'N/A',
+            'weight' => $sku->weight ? $sku->weight . 'g' : 'N/A',
+            'attributes' => $sku->attributeValues->pluck('id')->toArray(),
+            'images' => $imageUrls,
+        ];
+    })->values();
 @endphp
 
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -36,8 +64,8 @@
         <!-- Image Gallery -->
         <div class="col-md-6 space-y-4">
             <div class="border border-luxury-gold/10 rounded overflow-hidden shadow-sm bg-white aspect-[4/3] relative">
-                <img src="{{ $product->primaryImage ? asset('images/' . $product->primaryImage->image_path) : asset('images/saree_red.jpg') }}" 
-                     id="main-product-image" 
+                <img src="{{ $initialImage ? asset('images/' . $initialImage->image_path) : asset('images/saree_red.jpg') }}"
+                     id="main-product-image"
                      class="w-full h-full object-cover transition duration-300" 
                      alt="{{ $product->name }}">
             </div>
@@ -65,7 +93,7 @@
             <!-- Price Display Area -->
             <div class="border-t border-b border-luxury-gold/10 py-4 space-y-1">
                 <div class="flex items-baseline space-x-3">
-                    <span class="text-3xl font-bold text-luxury-maroon" id="sku-price">₹{{ number_format($product->base_price, 2) }}</span>
+                    <span class="text-3xl font-bold text-luxury-maroon" id="sku-price">₹{{ number_format($initialSku->selling_price ?? 0, 2) }}</span>
                     <span class="text-sm line-through text-gray-400 font-semibold" id="sku-mrp"></span>
                     <span class="text-xs bg-red-50 text-red-600 px-2 py-0.5 rounded border border-red-100 font-bold" id="sku-discount"></span>
                 </div>
@@ -270,7 +298,7 @@
                                 </h4>
                             </div>
                             <div class="flex items-center justify-between pt-2 border-t border-luxury-gold/5">
-                                <span class="text-xs font-bold text-luxury-charcoal">₹{{ number_format($rel->base_price, 2) }}</span>
+                                <span class="text-xs font-bold text-luxury-charcoal">₹{{ number_format($rel->skus->min('selling_price') ?? 0, 2) }}</span>
                                 <a href="{{ route('products.show', $rel->slug) }}" class="text-[10px] font-semibold text-luxury-gold hover:text-luxury-maroon no-underline">View Details &rarr;</a>
                             </div>
                         </div>
@@ -286,28 +314,9 @@
 
 @section('scripts')
 <script>
-    // Pass raw database SKUs details to JS
-    const skuList = @json($product->skus->map(function($sku) {
-        return [
-            'id' => $sku->id,
-            'sku_code' => $sku->sku_code,
-            'selling_price' => $sku->selling_price,
-            'mrp' => $sku->mrp,
-            'stock' => $sku->stock,
-            'barcode' => $sku->barcode ?? 'N/A',
-            'weight' => $sku->weight ? $sku->weight . 'g' : 'N/A',
-            'attributes' => $sku->attributeValues->pluck('id')->toArray(),
-        ];
-    }));
-
-    // Pass images details with their dynamic attribute values mapping
-    const imageList = @json($product->images->map(function($img) {
-        return [
-            'id' => $img->id,
-            'image_url' => asset('images/' . $img->image_path),
-            'attributes' => $img->attributeValues->pluck('id')->toArray(),
-        ];
-    }));
+    // Pass raw database SKUs details to JS - each variant carries its own photos
+    // (images belong to the SKU, not the product - docx section 6).
+    const skuList = @json($skuListForJs);
 
     $(document).ready(function() {
         // Thumbnail switcher
@@ -404,22 +413,18 @@
                 $('#sku-stock-status').text('Unavailable Configuration').addClass('text-danger');
             }
 
-            // 4. Multi-dimensional Image Filtering
-            // Display only images with no mapped attribute values OR where all mapped attribute values are in selectedVals
-            let visibleImages = imageList.filter(img => {
-                return img.attributes.length === 0 || img.attributes.every(id => selectedVals.includes(id));
-            });
+            // 4. Swap to this variant's own photos
+            let visibleImages = matchedSku ? matchedSku.images : [];
 
-            // Rebuild thumbnails container
             let container = $('#thumbnails-container');
             container.empty();
             if (visibleImages.length > 1) {
-                visibleImages.forEach((img, index) => {
+                visibleImages.forEach((url, index) => {
                     let activeClass = index === 0 ? 'border-luxury-gold' : 'border-luxury-gold/20';
                     let btn = `
-                        <button class="w-24 aspect-[4/3] border ${activeClass} rounded overflow-hidden bg-white hover:border-luxury-gold transition shadow-sm p-0 thumbnail-btn" 
-                                data-image-url="${img.image_url}">
-                            <img src="${img.image_url}" class="w-full h-full object-cover" alt="Thumbnail">
+                        <button class="w-24 aspect-[4/3] border ${activeClass} rounded overflow-hidden bg-white hover:border-luxury-gold transition shadow-sm p-0 thumbnail-btn"
+                                data-image-url="${url}">
+                            <img src="${url}" class="w-full h-full object-cover" alt="Thumbnail">
                         </button>
                     `;
                     container.append(btn);
@@ -428,7 +433,7 @@
 
             // Trigger main image load
             if (visibleImages.length > 0) {
-                $('#main-product-image').attr('src', visibleImages[0].image_url);
+                $('#main-product-image').attr('src', visibleImages[0]);
             }
         }
 

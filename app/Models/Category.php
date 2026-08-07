@@ -25,8 +25,12 @@ class Category extends Model
         return $this->hasMany(Product::class);
     }
 
-    public function attributes()
+    /**
+     * Category structure is kept to two levels (docx section 2): a
+     * sub-category may not itself have children.
+     */
+    public function isSubCategory(): bool
     {
-        return $this->belongsToMany(Attribute::class, 'category_attributes');
+        return $this->parent_id !== null;
     }
 }

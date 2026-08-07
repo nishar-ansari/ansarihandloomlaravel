@@ -171,6 +171,7 @@ class DatabaseSeeder extends Seeder
             'width' => 25.00,
             'height' => 5.00,
             'status' => 'active',
+            'is_default' => true, // shown as the design's listing thumbnail/price
         ]);
         $sku1Red->attributeValues()->attach([$valRed->id, $valBagh->id, $valZari->id]);
 
@@ -205,39 +206,38 @@ class DatabaseSeeder extends Seeder
             'width' => 20.00,
             'height' => 4.00,
             'status' => 'active',
+            'is_default' => true,
         ]);
         $sku2Green->attributeValues()->attach([$valGreen->id, $valPlain->id]);
 
-        // 10. Seed Images with Multi-dimensional Mapping
-        $imgRed = ProductImage::create([
-            'product_id' => $product1->id,
+        // 10. Seed Images - attached to the SKU (variant), never the product,
+        // so each color shows its own photos (docx section 6).
+        ProductImage::create([
+            'sku_id' => $sku1Red->id,
             'image_path' => 'saree_red.jpg',
             'title' => 'Red Banarasi Saree Front',
             'alt_text' => 'Red Banarasi Silk Saree',
             'sort_order' => 1,
             'is_primary' => 1,
         ]);
-        $imgRed->attributeValues()->attach([$valRed->id, $valBagh->id]);
 
-        $imgBlue = ProductImage::create([
-            'product_id' => $product1->id,
+        ProductImage::create([
+            'sku_id' => $sku1Blue->id,
             'image_path' => 'saree_blue.jpg',
             'title' => 'Blue Banarasi Saree Front',
             'alt_text' => 'Blue Banarasi Silk Saree',
-            'sort_order' => 2,
-            'is_primary' => 0,
+            'sort_order' => 1,
+            'is_primary' => 1,
         ]);
-        $imgBlue->attributeValues()->attach([$valBlue->id, $valBagh->id]);
 
-        $imgSuit = ProductImage::create([
-            'product_id' => $product2->id,
+        ProductImage::create([
+            'sku_id' => $sku2Green->id,
             'image_path' => 'suit_green.jpg',
             'title' => 'Green Salwar Suit',
             'alt_text' => 'Green Cotton Salwar Suit',
             'sort_order' => 1,
             'is_primary' => 1,
         ]);
-        $imgSuit->attributeValues()->attach([$valGreen->id, $valPlain->id]);
 
         // 11. Seed Customers
         $customer1 = Customer::create([

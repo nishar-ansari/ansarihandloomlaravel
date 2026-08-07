@@ -4,6 +4,16 @@
 @section('page_title', 'Manage Categories')
 
 @section('content')
+@if(session('success'))
+    <div class="alert alert-success text-xs rounded border border-green-300 py-2.5 px-4 bg-green-50 text-green-700 mb-4">
+        {{ session('success') }}
+    </div>
+@endif
+@if(session('error'))
+    <div class="alert alert-danger text-xs rounded border border-red-300 py-2.5 px-4 bg-red-50 text-red-700 mb-4">
+        {{ session('error') }}
+    </div>
+@endif
 <div class="row g-4">
     <!-- Category Creation Form -->
     <div class="col-md-4">

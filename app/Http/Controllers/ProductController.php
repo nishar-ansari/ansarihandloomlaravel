@@ -76,9 +76,9 @@ class ProductController extends Controller
     public function show($slug)
     {
         $product = Product::with([
-            'skus.attributeValues.attribute', 
-            'images.attributeValues.attribute', 
-            'category', 
+            'skus.attributeValues.attribute',
+            'skus.images',
+            'category',
             'brand',
             'attributeSet.attributes.values'
         ])
@@ -94,7 +94,7 @@ class ProductController extends Controller
             ->get();
 
         // Fetch related products (same category, excluding current product)
-        $relatedProducts = Product::with(['primaryImage', 'brand'])
+        $relatedProducts = Product::with(['primaryImage', 'brand', 'skus'])
             ->where('category_id', $product->category_id)
             ->where('id', '!=', $product->id)
             ->where('status', 'active')

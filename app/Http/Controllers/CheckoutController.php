@@ -81,7 +81,19 @@ class CheckoutController extends Controller
             ]);
 
             // Save Order Items & Adjust Stock
+            // Lock every SKU row first so two simultaneous checkouts for the
+            // last unit can't both succeed (real-life overselling scenario).
             foreach ($cart as $skuId => $details) {
+                $sku = ProductSku::lockForUpdate()->find($skuId);
+
+                if (!$sku || $sku->status !== 'active') {
+                    throw new \Exception('An item in your bag is no longer available. Please review your bag and try again.');
+                }
+
+                if (!$sku->hasStockFor($details['quantity'])) {
+                    throw new \Exception("Sorry, only {$sku->stock} unit(s) of {$sku->sku_code} are left in stock. Please update the quantity in your bag.");
+                }
+
                 OrderItem::create([
                     'order_id' => $order->id,
                     'product_sku_id' => $skuId,
@@ -89,12 +101,7 @@ class CheckoutController extends Controller
                     'price' => $details['price'],
                 ]);
 
-                // Decrement stock
-                $sku = ProductSku::lockForUpdate()->find($skuId);
-                if ($sku) {
-                    $sku->stock = max(0, $sku->stock - $details['quantity']);
-                    $sku->save();
-                }
+                $sku->decrement('stock', $details['quantity']);
             }
 
             DB::commit();

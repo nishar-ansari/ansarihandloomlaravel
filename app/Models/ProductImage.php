@@ -4,19 +4,17 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class ProductImage extends Model
 {
-    protected $fillable = ['product_id', 'image_path', 'title', 'alt_text', 'sort_order', 'is_primary'];
+    protected $fillable = ['sku_id', 'image_path', 'title', 'alt_text', 'sort_order', 'is_primary'];
 
-    public function product(): BelongsTo
-    {
-        return $this->belongsTo(Product::class);
-    }
+    protected $casts = [
+        'is_primary' => 'boolean',
+    ];
 
-    public function attributeValues(): BelongsToMany
+    public function sku(): BelongsTo
     {
-        return $this->belongsToMany(AttributeValue::class, 'image_attribute_values', 'product_image_id', 'attribute_value_id');
+        return $this->belongsTo(ProductSku::class, 'sku_id');
     }
 }
